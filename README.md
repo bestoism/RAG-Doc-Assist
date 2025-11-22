@@ -1,14 +1,12 @@
 # 📄 AI Document Assistant (RAG + Grammar Analysis)
+An intelligent, full-stack document analysis tool powered by **Retrieval-Augmented Generation (RAG)**. This project allows users to upload PDF or DOCX files and chat with them to extract insights, summaries, and specific information. It uses a **Hybrid AI approach** (Local Embeddings + Cloud LLM) to ensure speed, stability, and zero cost.
+
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue.svg) ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688.svg) ![Streamlit](https://img.shields.io/badge/Streamlit-1.31-FF4B4B.svg) ![LangChain](https://img.shields.io/badge/LangChain-0.3.7-orange.svg) ![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4.svg)
 
 <img width="997" height="628" alt="image" src="https://github.com/user-attachments/assets/7a629a1c-18d2-4e45-a054-6d9f1d158c0c" />
 ---
 <img width="1588" height="782" alt="image" src="https://github.com/user-attachments/assets/69860c05-940f-43ab-9c4b-54ede11b2d41" />
-
-
-
-An intelligent, full-stack document analysis tool powered by **Retrieval-Augmented Generation (RAG)**. This project allows users to upload PDF or DOCX files and chat with them to extract insights, summaries, and specific information. It uses a **Hybrid AI approach** (Local Embeddings + Cloud LLM) to ensure speed, stability, and zero cost.
 
 ## 🚀 Key Features
 
