@@ -1,0 +1,6 @@
+# Environment Variables (PENTING: Agar API Key tidak ter-upload)
+.env
+
+# Database AI
+backend/chroma_db/
+__pycache__/
