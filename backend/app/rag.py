@@ -45,7 +45,6 @@ class DocumentProcessor:
                 
         # Reset variable vector_store di memory
         self.vector_store = None
-        # ---------------------------
 
         # Gunakan PDFPlumberLoader agar spasi font tidak berantakan
         if file_path.endswith(".pdf"):
@@ -56,6 +55,11 @@ class DocumentProcessor:
             raise ValueError("Format file tidak didukung")
             
         docs = loader.load()
+        
+        print(f"📄 Total Halaman: {len(docs)}")
+        if len(docs) > 0:
+            print("🔍 Intip Halaman 1 (Cover):")
+            print(docs[0].page_content[:500])
 
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
@@ -75,7 +79,7 @@ class DocumentProcessor:
             # Load database yang sudah ada jika variable kosong
             self.vector_store = Chroma(persist_directory=CHROMA_PATH, embedding_function=self.embeddings)
         
-        retriever = self.vector_store.as_retriever(search_kwargs={"k": 5})
+        retriever = self.vector_store.as_retriever(search_kwargs={"k": 20})
         
         qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
@@ -85,7 +89,6 @@ class DocumentProcessor:
         )
         return qa_chain
 
-    # --- INI FUNGSI YANG TADI HILANG ---
     def ask_question(self, query: str):
         chain = self.get_qa_chain()
         # Jalankan chain
