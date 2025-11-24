@@ -27,7 +27,7 @@ class DocumentProcessor:
         
         # Menggunakan gemini-pro yang stabil
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-pro", 
+            model="gemini-2.0-flash", 
             temperature=0.3,
             convert_system_message_to_human=True
         )
