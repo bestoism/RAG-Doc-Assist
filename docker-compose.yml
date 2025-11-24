@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # --- SERVICE 1: BACKEND (FastAPI) ---
+  backend:
+    build: .
+    container_name: ai_doc_backend
+    # Perintah menjalankan uvicorn di dalam docker
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+    volumes:
+      # Agar database AI tersimpan di laptop (tidak hilang saat docker mati)
+      - ./backend/chroma_db:/app/backend/chroma_db
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  # --- SERVICE 2: FRONTEND (Streamlit) ---
+  frontend:
+    build: .
+    container_name: ai_doc_frontend
+    # Perintah menjalankan streamlit
+    command: streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      # INI KUNCINYA: Memberitahu frontend bahwa backend ada di alamat "http://backend:8000"
+      - API_URL=http://backend:8000
+    depends_on:
+      - backend

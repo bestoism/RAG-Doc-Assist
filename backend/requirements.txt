@@ -8,3 +8,6 @@ chromadb
 pypdf
 docx2txt
 tiktoken
+langchain-huggingface==0.1.1
+sentence-transformers
+pdfplumber
