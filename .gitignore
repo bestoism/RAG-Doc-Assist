@@ -1,4 +1,14 @@
+# Environment Variables
 .env
+.venv
 venv/
-backend/chroma_db/
+
+# Python Cache
 __pycache__/
+*.pyc
+
+# Database & Uploads 
+backend/chroma_db/
+chroma_db/
+uploads/
+backend/uploads/
