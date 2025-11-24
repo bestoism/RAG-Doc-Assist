@@ -1,86 +1,97 @@
 import streamlit as st
 import requests
 
-# Alamat Backend (Pastikan backend jalan di port 8000)
+# Konfigurasi Halaman
+st.set_page_config(page_title="AI Doc Assistant", layout="wide", page_icon="🤖")
+
 API_URL = "http://127.0.0.1:8000"
 
-st.set_page_config(page_title="AI Doc Assistant", layout="wide")
+# --- CSS Custom agar tampilan lebih bersih ---
+st.markdown("""
+<style>
+    .stChatMessage {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+""", unsafe_allow_html=True)
 
+# Judul
 st.title("🤖 AI Document Assistant")
-st.markdown("Upload dokumen (PDF/DOCX), lalu tanyakan apa saja!")
+st.caption("Powered by RAG + Gemini Pro + Local Embeddings")
 
-# --- SIDEBAR: UPLOAD FILE ---
+# --- SIDEBAR: UPLOAD ---
 with st.sidebar:
     st.header("📂 Upload Dokumen")
-    uploaded_file = st.file_uploader("Pilih file PDF atau DOCX", type=['pdf', 'docx'])
+    uploaded_file = st.file_uploader("Upload PDF / DOCX", type=['pdf', 'docx'])
     
-    if uploaded_file is not None:
-        if st.button("Proses Dokumen"):
-            with st.spinner("Sedang memproses dokumen ke otak AI..."):
-                try:
-                    # Kirim file ke Backend
-                    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-                    response = requests.post(f"{API_URL}/upload", files=files)
-                    
-                    if response.status_code == 200:
-                        st.success("✅ Dokumen berhasil dipelajari!")
-                        st.json(response.json())
-                    else:
-                        st.error(f"Gagal upload: {response.text}")
-                except Exception as e:
-                    st.error(f"Koneksi Error: {e}")
+    if uploaded_file and st.button("Proses Dokumen"):
+        with st.spinner("Sedang membaca & mengingat isi dokumen..."):
+            files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+            try:
+                res = requests.post(f"{API_URL}/upload", files=files)
+                if res.status_code == 200:
+                    st.success("✅ Sukses! Dokumen berhasil dipelajari.")
+                    st.balloons() # Efek animasi sukses
+                else:
+                    st.error(f"Gagal: {res.text}")
+            except Exception as e:
+                st.error(f"Koneksi Error: {e}")
 
-# --- AREA UTAMA: FITUR ---
-tab1, tab2, tab3 = st.tabs(["💬 Chat & Q&A", "📝 Cek Grammar", "📊 Info Project"])
+    st.divider()
+    st.markdown("### Fitur Lain")
+    mode = st.radio("Pilih Mode:", ["💬 Chat Dokumen", "📝 Cek Grammar"])
 
-# TAB 1: CHAT
-with tab1:
-    st.header("Tanya Jawab dengan Dokumen")
-    user_query = st.text_input("Apa yang ingin kamu tanyakan tentang dokumen tersebut?")
-    
-    if st.button("Kirim Pertanyaan"):
-        if not user_query:
-            st.warning("Tulis pertanyaan dulu dong!")
-        else:
-            with st.spinner("AI sedang berpikir..."):
+# --- MODE 1: CHAT DOKUMEN (MODERN UI) ---
+if mode == "💬 Chat Dokumen":
+    # 1. Inisialisasi History Chat di Memory
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # 2. Tampilkan Chat Terdahulu (biar tidak hilang saat refresh)
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # 3. Input Chat Baru (Posisinya di bawah)
+    if prompt := st.chat_input("Tanyakan sesuatu tentang dokumen..."):
+        # Tampilkan pesan User
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # Kirim ke Backend & Tampilkan Jawaban AI
+        with st.chat_message("assistant"):
+            with st.spinner("AI sedang membaca referensi..."):
                 try:
-                    payload = {"query": user_query}
+                    payload = {"query": prompt}
                     res = requests.post(f"{API_URL}/chat", json=payload)
                     
                     if res.status_code == 200:
-                        answer = res.json().get("answer", "Tidak ada jawaban.")
-                        st.markdown("### 🤖 Jawaban AI:")
-                        st.write(answer)
+                        answer = res.json().get('answer', "Maaf, tidak ada jawaban.")
+                        st.markdown(answer)
+                        # Simpan jawaban AI ke history
+                        st.session_state.messages.append({"role": "assistant", "content": answer})
                     else:
-                        st.error(f"Error Backend: {res.text}")
+                        st.error(f"⚠️ Error dari Backend: {res.text}")
                 except Exception as e:
-                    st.error(f"Gagal menghubungi backend: {e}")
+                    st.error(f"🔌 Gagal terhubung ke Backend. Pastikan uvicorn jalan! Error: {e}")
 
-# TAB 2: GRAMMAR CHECK
-with tab2:
-    st.header("Analisis Tata Bahasa")
-    text_input = st.text_area("Masukkan kalimat/paragraf yang ingin dicek:")
+# --- MODE 2: GRAMMAR CHECK ---
+elif mode == "📝 Cek Grammar":
+    st.subheader("Analisis Tata Bahasa & Ejaan")
+    text_input = st.text_area("Masukkan teks yang ingin diperiksa:", height=150)
     
-    if st.button("Cek Grammar"):
+    if st.button("🔍 Periksa Grammar"):
         if text_input:
-            with st.spinner("Menganalisis grammar..."):
+            with st.spinner("Menganalisis..."):
                 try:
                     res = requests.post(f"{API_URL}/grammar", json={"text": text_input})
                     if res.status_code == 200:
-                        st.markdown("### 🔍 Hasil Analisis:")
-                        st.write(res.json()['analysis'])
+                        st.markdown("### Hasil Analisis:")
+                        st.info(res.json()['analysis'])
                     else:
-                        st.error("Gagal memproses grammar.")
+                        st.error("Gagal memproses.")
                 except Exception as e:
                     st.error(f"Error: {e}")
-
-# TAB 3: INFO
-with tab3:
-    st.info("Project ini dibuat menggunakan FastAPI (Backend), LangChain (AI Logic), dan Streamlit (Frontend).")
-    st.markdown("""
-    **Fitur:**
-    - RAG (Retrieval Augmented Generation)
-    - Upload PDF/DOCX
-    - Grammar Check
-    - Powered by Google Gemini (Free Tier)
-    """)
