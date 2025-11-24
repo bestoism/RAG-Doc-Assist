@@ -1,12 +1,10 @@
 import streamlit as st
 import requests
 
-# Konfigurasi Halaman
 st.set_page_config(page_title="AI Doc Assistant", layout="wide", page_icon="🤖")
 
 API_URL = "http://127.0.0.1:8000"
 
-# --- CSS Custom agar tampilan lebih bersih ---
 st.markdown("""
 <style>
     .stChatMessage {
@@ -17,11 +15,10 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Judul
 st.title("🤖 AI Document Assistant")
 st.caption("Powered by RAG + Gemini Pro + Local Embeddings")
 
-# --- SIDEBAR: UPLOAD ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("📂 Upload Dokumen")
     uploaded_file = st.file_uploader("Upload PDF / DOCX", type=['pdf', 'docx'])
@@ -33,65 +30,85 @@ with st.sidebar:
                 res = requests.post(f"{API_URL}/upload", files=files)
                 if res.status_code == 200:
                     st.success("✅ Sukses! Dokumen berhasil dipelajari.")
-                    st.balloons() # Efek animasi sukses
+                    # Reset history chat saat upload file baru
+                    st.session_state.messages = []
                 else:
                     st.error(f"Gagal: {res.text}")
             except Exception as e:
                 st.error(f"Koneksi Error: {e}")
 
     st.divider()
-    st.markdown("### Fitur Lain")
     mode = st.radio("Pilih Mode:", ["💬 Chat Dokumen", "📝 Cek Grammar"])
 
-# --- MODE 1: CHAT DOKUMEN (MODERN UI) ---
+# --- MODE 1: CHAT DOKUMEN ---
 if mode == "💬 Chat Dokumen":
-    # 1. Inisialisasi History Chat di Memory
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # 2. Tampilkan Chat Terdahulu (biar tidak hilang saat refresh)
+    # 1. LOOP RENDERING (Tampilkan Chat Lama + Sumbernya)
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+            
+            # --- PERBAIKAN: Tampilkan sumber jika ada di history ---
+            if "sources" in message and message["sources"]:
+                with st.expander("📚 Sumber Referensi (History)"):
+                    for s in message["sources"]:
+                        st.caption(f"• {s}")
+            # -------------------------------------------------------
 
-    # 3. Input Chat Baru (Posisinya di bawah)
-    if prompt := st.chat_input("Tanyakan sesuatu tentang dokumen..."):
-        # Tampilkan pesan User
+    # 2. INPUT USER
+    if prompt := st.chat_input("Tanyakan sesuatu... (Made by Besto)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         # Kirim ke Backend & Tampilkan Jawaban AI
         with st.chat_message("assistant"):
-            with st.spinner("AI sedang membaca referensi..."):
+            with st.spinner("AI sedang mengingat konteks & membaca..."):
                 try:
-                    payload = {"query": prompt}
+                    # --- PERUBAHAN DISINI ---
+                    # Siapkan history (buang key 'sources' biar ringan, ambil role & content aja)
+                    clean_history = [
+                        {"role": m["role"], "content": m["content"]} 
+                        for m in st.session_state.messages
+                    ]
+                    
+                    # Kirim query + history
+                    payload = {"query": prompt, "history": clean_history}
                     res = requests.post(f"{API_URL}/chat", json=payload)
+                    # ------------------------
                     
                     if res.status_code == 200:
-                        answer = res.json().get('answer', "Maaf, tidak ada jawaban.")
-                        st.markdown(answer)
-                        # Simpan jawaban AI ke history
-                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                        data = res.json()
+                        answer_text = data.get('answer', "Maaf, tidak ada jawaban.")
+                        sources = data.get('sources', [])
+                        
+                        st.markdown(answer_text)
+                        
+                        if sources:
+                            with st.expander("📚 Sumber Referensi"):
+                                for s in sources:
+                                    st.caption(f"• {s}")
+                        
+                        # Simpan ke history
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": answer_text,
+                            "sources": sources
+                        })
                     else:
                         st.error(f"⚠️ Error dari Backend: {res.text}")
                 except Exception as e:
                     st.error(f"🔌 Gagal terhubung ke Backend. Pastikan uvicorn jalan! Error: {e}")
 
-# --- MODE 2: GRAMMAR CHECK ---
+# --- MODE 2: GRAMMAR ---
 elif mode == "📝 Cek Grammar":
-    st.subheader("Analisis Tata Bahasa & Ejaan")
-    text_input = st.text_area("Masukkan teks yang ingin diperiksa:", height=150)
-    
-    if st.button("🔍 Periksa Grammar"):
-        if text_input:
+    st.subheader("Analisis Tata Bahasa")
+    text = st.text_area("Masukkan teks:", height=150)
+    if st.button("Periksa"):
+        if text:
             with st.spinner("Menganalisis..."):
-                try:
-                    res = requests.post(f"{API_URL}/grammar", json={"text": text_input})
-                    if res.status_code == 200:
-                        st.markdown("### Hasil Analisis:")
-                        st.info(res.json()['analysis'])
-                    else:
-                        st.error("Gagal memproses.")
-                except Exception as e:
-                    st.error(f"Error: {e}")
+                res = requests.post(f"{API_URL}/grammar", json={"text": text})
+                if res.status_code == 200:
+                    st.info(res.json()['analysis'])

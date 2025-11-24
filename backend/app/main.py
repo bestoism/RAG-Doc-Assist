@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
+from typing import List, Optional
 import shutil
 import os
 from .rag import processor # Import otak AI kita
@@ -13,6 +14,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Model data untuk request
 class QueryRequest(BaseModel):
     query: str
+    history: List[dict] = [] 
 
 class GrammarRequest(BaseModel):
     text: str
@@ -41,8 +43,8 @@ async def upload_document(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(request: QueryRequest):
     try:
-        answer = processor.ask_question(request.query)
-        return {"answer": answer}
+        result = processor.ask_question(request.query, request.history)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

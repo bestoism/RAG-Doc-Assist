@@ -10,6 +10,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain.chains.retrieval_qa.base import RetrievalQA
 import shutil 
+from langchain.prompts import PromptTemplate
 
 load_dotenv()
 
@@ -79,7 +80,20 @@ class DocumentProcessor:
             # Load database yang sudah ada jika variable kosong
             self.vector_store = Chroma(persist_directory=CHROMA_PATH, embedding_function=self.embeddings)
         
-        retriever = self.vector_store.as_retriever(search_kwargs={"k": 20})
+        retriever = self.vector_store.as_retriever(search_kwargs={"k": 10})
+        
+        template = """Kamu adalah asisten dokumen yang cerdas.
+        Gunakan potongan konteks berikut untuk menjawab pertanyaan di akhir.
+        Jika kamu tidak tahu jawabannya dari konteks, katakan saja "Maaf, informasi tersebut tidak ditemukan dalam dokumen ini", jangan mencoba mengarang jawaban.
+        
+        Konteks:
+        {context}
+        
+        Pertanyaan: {question}
+        
+        Jawaban yang Bermanfaat:"""
+        
+        QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
         
         qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
@@ -89,14 +103,59 @@ class DocumentProcessor:
         )
         return qa_chain
 
-    def ask_question(self, query: str):
-        chain = self.get_qa_chain()
-        # Jalankan chain
-        response = chain.invoke({"query": query})
+    # ... (kode atas tetap sama) ...
+
+    # Ubah definisi fungsi ini untuk menerima history
+    def ask_question(self, query: str, history: list = []):
         
-        # Ambil hasil jawabannya saja
-        return response["result"]
-    # -----------------------------------
+        # 1. CONTEXTUAL REPHRASING (Jika ada history)
+        final_query = query
+        
+        if history:
+            # Format history menjadi teks string
+            chat_history_str = ""
+            for chat in history[-4:]: # Ambil 4 chat terakhir saja biar hemat
+                role = "User" if chat['role'] == 'user' else "Assistant"
+                chat_history_str += f"{role}: {chat['content']}\n"
+            
+            # Minta LLM memperbaiki pertanyaan (Rephrasing)
+            prompt_rephrase = f"""
+            Berdasarkan riwayat percakapan berikut, ubah pertanyaan user menjadi pertanyaan lengkap yang bisa berdiri sendiri.
+            Jangan jawab pertanyaannya, cukup tulis ulang pertanyaannya agar jelas subjeknya.
+            
+            Riwayat:
+            {chat_history_str}
+            
+            Pertanyaan User: {query}
+            
+            Pertanyaan Baru (Lengkap):"""
+            
+            # Pakai LLM untuk mikir sebentar
+            rephrased = self.llm.invoke(prompt_rephrase).content
+            print(f"🔄 Rephrasing: '{query}' -> '{rephrased}'") # Cek di terminal
+            final_query = rephrased
+
+        # 2. Cari Jawaban pakai Query yang sudah diperbaiki
+        chain = self.get_qa_chain()
+        response = chain.invoke({"query": final_query})
+        
+        # 3. Format Output
+        answer_text = response["result"]
+        source_documents = response["source_documents"]
+        list_sumber = []
+        
+        for doc in source_documents:
+            page_num = doc.metadata.get("page", 0) + 1
+            file_name = os.path.basename(doc.metadata.get("source", "Dokumen"))
+            list_sumber.append(f"{file_name} (Hal. {page_num})")
+        
+        unique_sources = list(set(list_sumber))
+        
+        return {
+            "answer": answer_text,
+            "sources": unique_sources,
+            "debug_query": final_query # Dikirim balik biar kita tahu (opsional)
+        }
 
     def analyze_grammar(self, text: str):
         prompt = f"Analisis tata bahasa (grammar) dari teks berikut. Tunjukkan salahnya dimana dan berikan versi yang benar:\n\n{text}"
