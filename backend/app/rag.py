@@ -1,10 +1,7 @@
 import os
 from dotenv import load_dotenv
-# Embeddings Offline (Gratis & Stabil)
 from langchain_huggingface import HuggingFaceEmbeddings
-# Chat Online (Google Gemini)
 from langchain_google_genai import ChatGoogleGenerativeAI
-# Loader Dokumen (PDFPlumber untuk hasil bacaan lebih bagus)
 from langchain_community.document_loaders import PDFPlumberLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
@@ -27,7 +24,7 @@ class DocumentProcessor:
         
         # Menggunakan gemini-pro yang stabil
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash", 
+            model="gemini-2.5-pro", 
             temperature=0.3,
             convert_system_message_to_human=True
         )
