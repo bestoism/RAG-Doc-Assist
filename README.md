@@ -4,9 +4,9 @@
 
 An intelligent, full-stack document analysis tool powered by **Retrieval-Augmented Generation (RAG)**. This project allows users to upload PDF or DOCX files and have a **context-aware conversation** with them. It uses a **Hybrid AI approach** (Local Embeddings + Cloud LLM) to ensure speed, stability, and zero cost.
 
-<img width="997" height="628" alt="image" src="https://github.com/user-attachments/assets/7a629a1c-18d2-4e45-a054-6d9f1d158c0c" />
 ---
-<img width="1588" height="782" alt="image" src="https://github.com/user-attachments/assets/69860c05-940f-43ab-9c4b-54ede11b2d41" />
+<img width="1919" height="852" alt="image" src="https://github.com/user-attachments/assets/68b311b3-035f-493b-885b-e25b6fd626f0" />
+---
 
 ## 🚀 Key Features (Updated)
 
